@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/images/cycla_logo.png" width="120" alt="Cycla Logo" />
+</p>
+
 # Cycla — Fatura & Abonelik Takipçisi (Flutter)
 
 Tüm aboneliklerinizi ve faturalarınızı çevrimdışı öncelikli (offline-first) mimariyle tek bir yerde toplayan, ödeme yaklaşınca yerel bildirim gönderen ve aylık/yıllık harcama analizini gösteren Flutter uygulaması.

@@ -199,6 +199,7 @@ class _AddEditSubscriptionScreenState
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.existing != null;
+    final settings = ref.watch(settingsProvider);
     final enteredAmount =
         double.tryParse(_amountController.text.replaceAll(',', '.')) ?? 0;
 
@@ -317,6 +318,32 @@ class _AddEditSubscriptionScreenState
                 ),
               ],
             ),
+            if (_currency != CurrencyCode.tryCode) ...[
+              const SizedBox(height: 8),
+              Builder(
+                builder: (context) {
+                  final unitRate = _currency == CurrencyCode.usd
+                      ? settings.usdRate
+                      : settings.eurRate;
+                  final convertedTry = CurrencyFormatter.convertToTry(
+                    enteredAmount,
+                    currency: _currency,
+                    usdRate: settings.usdRate,
+                    eurRate: settings.eurRate,
+                  );
+                  return Text(
+                    enteredAmount > 0
+                        ? 'Güncel kur (1 ${_currency.code} = ${CurrencyFormatter.format(unitRate)}) • Yaklaşık: ${CurrencyFormatter.format(convertedTry)}'
+                        : 'Güncel kur: 1 ${_currency.code} = ${CurrencyFormatter.format(unitRate)}',
+                    style: const TextStyle(
+                      color: AppColors.secondary,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  );
+                },
+              ),
+            ],
             const SizedBox(height: 20),
 
             // Ödeme Periyodu

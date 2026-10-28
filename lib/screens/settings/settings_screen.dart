@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/legal_texts.dart';
+import '../../core/utils/currency_formatter.dart';
+import '../../core/widgets/cycla_logo.dart';
+import '../../models/app_settings.dart';
 import '../../providers/subscription_providers.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -33,7 +37,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     super.dispose();
   }
 
-  Future<void> _saveRates() async {
+  Future<void> _saveManualRates() async {
     final settings = ref.read(settingsProvider);
     final usd =
         double.tryParse(_usdController.text.trim().replaceAll(',', '.')) ??
@@ -46,12 +50,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           settings.copyWith(
             usdRate: usd > 0 ? usd : settings.usdRate,
             eurRate: eur > 0 ? eur : settings.eurRate,
+            ratesUpdatedAt: DateTime.now(),
+            ratesSource: 'Manuel Giriş',
           ),
         );
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Döviz kurları güncellendi.')),
+        const SnackBar(content: Text('Manuel döviz kurları kaydedildi.')),
       );
     }
   }
@@ -136,7 +142,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Canlı kur otomatik güncellendiğinde metin kutularını eşitle
+    ref.listen<AppSettings>(settingsProvider, (previous, next) {
+      if (previous?.usdRate != next.usdRate) {
+        _usdController.text = next.usdRate.toStringAsFixed(2);
+      }
+      if (previous?.eurRate != next.eurRate) {
+        _eurController.text = next.eurRate.toStringAsFixed(2);
+      }
+    });
+
     final settings = ref.watch(settingsProvider);
+    final isFetching = ref.watch(isFetchingRatesProvider);
+
+    final lastUpdateLabel = settings.ratesUpdatedAt != null
+        ? 'Son otomatik güncelleme: ${DateFormat('HH:mm:ss', 'tr_TR').format(settings.ratesUpdatedAt!)} (${settings.ratesSource ?? 'Canlı'})'
+        : 'Canlı kurlar otomatik alınıyor...';
 
     return Scaffold(
       appBar: AppBar(
@@ -148,6 +169,206 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 36),
         children: [
+          // Canlı Döviz Kuru Bölümü (Tam Otomatik Periyodik Güncelleme)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Canlı Döviz Kurları (USD & EUR)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15.5,
+                      ),
+                    ),
+                    if (isFetching)
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.secondary,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  lastUpdateLabel,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: settings.ratesUpdatedAt != null
+                        ? AppColors.secondary
+                        : AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Anlık Kur Bilgi Kartları
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceElevated,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '1 USD',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              CurrencyFormatter.format(settings.usdRate),
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceElevated,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '1 EUR',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              CurrencyFormatter.format(settings.eurRate),
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Otomatik Canlı Kur Güncelleme'),
+                  subtitle: Text(
+                    settings.autoUpdateRates
+                        ? 'Her ${settings.rateRefreshSeconds} saniyede bir otomatik güncellenir'
+                        : 'Otomatik güncelleme kapalı (manuel kur aktif)',
+                  ),
+                  value: settings.autoUpdateRates,
+                  onChanged: (val) {
+                    ref.read(settingsProvider.notifier).updateSettings(
+                          settings.copyWith(autoUpdateRates: val),
+                        );
+                  },
+                ),
+
+                if (settings.autoUpdateRates) ...[
+                  const Text(
+                    'Otomatik Güncelleme Sıklığı',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final sec in [10, 15, 30])
+                        ChoiceChip(
+                          label: Text('$sec Saniye'),
+                          selected: settings.rateRefreshSeconds == sec,
+                          onSelected: (_) {
+                            ref.read(settingsProvider.notifier).updateSettings(
+                                  settings.copyWith(rateRefreshSeconds: sec),
+                                );
+                          },
+                        ),
+                    ],
+                  ),
+                ] else ...[
+                  const Divider(),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _usdController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: '1 USD (₺)',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: _eurController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: '1 EUR (₺)',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: OutlinedButton.icon(
+                      onPressed: _saveManualRates,
+                      icon: const Icon(Icons.save_outlined, size: 17),
+                      label: const Text('Manuel Kuru Kaydet'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // Bildirim Ayarları
           Container(
             padding: const EdgeInsets.all(16),
@@ -204,70 +425,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Döviz Kurları
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Döviz Kuru Hesaplama',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'USD ve EUR cinsinden eklediğiniz aboneliklerin aylık TL karşılığını hesaplamak için kullanılır.',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _usdController,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: const InputDecoration(
-                          labelText: '1 USD (₺)',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _eurController,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: const InputDecoration(
-                          labelText: '1 EUR (₺)',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton.tonalIcon(
-                    onPressed: _saveRates,
-                    icon: const Icon(Icons.save_outlined, size: 18),
-                    label: const Text('Kurları Güncelle'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
           // Veri Yönetimi ve Hakkında
           Container(
             padding: const EdgeInsets.all(16),
@@ -318,16 +475,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 20),
 
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            child: Text(
-              'Cycla v1.0.0 • Tüm verileriniz yalnızca kendi cihazınızda saklanır.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 11.5,
+          const Column(
+            children: [
+              CyclaLogo(size: 46, borderRadius: 13),
+              SizedBox(height: 10),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  'Cycla v1.0.0 • Tüm verileriniz yalnızca kendi cihazınızda saklanır.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11.5,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),

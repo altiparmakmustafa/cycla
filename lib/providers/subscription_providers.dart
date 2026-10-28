@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/services/exchange_rate_service.dart';
 import '../core/services/notification_service.dart';
 import '../models/app_settings.dart';
 import '../models/subscription.dart';
@@ -15,25 +17,121 @@ final subscriptionRepositoryProvider = Provider<SubscriptionRepository>((ref) {
   return SubscriptionRepository(prefs);
 });
 
+/// Canlı kur sorgusu devam ediyor mu?
+final isFetchingRatesProvider = StateProvider<bool>((ref) => false);
+
+/// Canlı kur sorgusu sırasında oluşan son hata mesajı (varsa)
+final ratesErrorProvider = StateProvider<String?>((ref) => null);
+
 class SettingsNotifier extends StateNotifier<AppSettings> {
   final SubscriptionRepository _repository;
   final Ref _ref;
+  final bool _enableAutoPolling;
 
-  SettingsNotifier(this._repository, this._ref)
-      : super(_repository.loadSettings());
+  Timer? _pollingTimer;
+  bool _isRequestInFlight = false;
+  bool _disposed = false;
+
+  SettingsNotifier(
+    this._repository,
+    this._ref, {
+    bool fetchOnInit = true,
+  })  : _enableAutoPolling = fetchOnInit,
+        super(_repository.loadSettings()) {
+    if (_enableAutoPolling && state.autoUpdateRates) {
+      Future<void>.microtask(() {
+        refreshLiveExchangeRates(silent: true);
+        _configurePollingTimer();
+      });
+    }
+  }
+
+  void _configurePollingTimer() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+
+    if (_disposed || !_enableAutoPolling || !state.autoUpdateRates) {
+      return;
+    }
+
+    final intervalSeconds =
+        state.rateRefreshSeconds < 10 ? 10 : state.rateRefreshSeconds;
+    _pollingTimer = Timer.periodic(
+      Duration(seconds: intervalSeconds),
+      (_) => refreshLiveExchangeRates(silent: true),
+    );
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+    super.dispose();
+  }
 
   Future<void> updateSettings(AppSettings updated) async {
+    final prevAuto = state.autoUpdateRates;
+    final prevInterval = state.rateRefreshSeconds;
+
     state = updated;
     await _repository.saveSettings(updated);
+
+    if (prevAuto != updated.autoUpdateRates ||
+        prevInterval != updated.rateRefreshSeconds) {
+      _configurePollingTimer();
+      if (updated.autoUpdateRates && !prevAuto && _enableAutoPolling) {
+        unawaited(refreshLiveExchangeRates(silent: true));
+      }
+    }
+
     final subs = _ref.read(subscriptionsProvider);
     await NotificationService.instance.syncAllReminders(subs, state);
   }
+
+  /// İnternetten canlı USD/TRY ve EUR/TRY kurlarını otomatik çeker ve kaydeder.
+  Future<bool> refreshLiveExchangeRates({bool silent = true}) async {
+    if (_disposed || _isRequestInFlight) return false;
+    _isRequestInFlight = true;
+    _ref.read(isFetchingRatesProvider.notifier).state = true;
+
+    try {
+      final snapshot = await ExchangeRateService.instance.fetchLatestTryRates();
+      if (_disposed) return false;
+
+      final updated = state.copyWith(
+        usdRate: snapshot.usdTry,
+        eurRate: snapshot.eurTry,
+        ratesUpdatedAt: snapshot.fetchedAt,
+        ratesSource: snapshot.source,
+      );
+      state = updated;
+      await _repository.saveSettings(updated);
+      _ref.read(ratesErrorProvider.notifier).state = null;
+      return true;
+    } catch (_) {
+      if (!_disposed && !silent) {
+        _ref.read(ratesErrorProvider.notifier).state =
+            'Canlı kur servisine ulaşılamadı. Son kayıtlı kurlar kullanılıyor.';
+      }
+      return false;
+    } finally {
+      _isRequestInFlight = false;
+      if (!_disposed) {
+        _ref.read(isFetchingRatesProvider.notifier).state = false;
+      }
+    }
+  }
 }
+
+/// Test ortamında periyodik zamanlayıcıyı devre dışı bırakabilmek için bayrak.
+final enableAutoLiveRatesFetchProvider = Provider<bool>((ref) => true);
 
 final settingsProvider =
     StateNotifierProvider<SettingsNotifier, AppSettings>((ref) {
   final repo = ref.watch(subscriptionRepositoryProvider);
-  return SettingsNotifier(repo, ref);
+  final fetchOnInit = ref.watch(enableAutoLiveRatesFetchProvider);
+  return SettingsNotifier(repo, ref, fetchOnInit: fetchOnInit);
 });
 
 class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {

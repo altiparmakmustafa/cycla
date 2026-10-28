@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/symbolic_icons.dart';
+import '../../core/widgets/cycla_logo.dart';
 import '../../models/service_template.dart';
 import '../../models/subscription.dart';
 import '../../providers/subscription_providers.dart';
 import '../add_edit/add_edit_subscription_screen.dart';
+import 'widgets/live_rates_bar.dart';
 import 'widgets/subscription_tile.dart';
 import 'widgets/summary_hero_card.dart';
 
@@ -28,20 +30,26 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: const Row(
           children: [
-            Text(
-              'Cycla',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
-            ),
-            Text(
-              'Fatura & Abonelik Takipçisi',
-              style: TextStyle(
-                fontSize: 11.5,
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
+            CyclaLogo(size: 38, borderRadius: 11),
+            SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Cycla',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 21),
+                ),
+                Text(
+                  'Fatura & Abonelik Takipçisi',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -62,6 +70,8 @@ class HomeScreen extends ConsumerWidget {
             activeCount: activeCount,
             upcomingCount: upcoming.length,
           ),
+          const SizedBox(height: 12),
+          const LiveRatesBar(),
           const SizedBox(height: 16),
 
           // Deneme Sürümü Savar Uyarı Kartı
@@ -280,19 +290,7 @@ class HomeScreen extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacityFactor(0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.add_card_outlined,
-              size: 32,
-              color: AppColors.primary,
-            ),
-          ),
+          const CyclaLogo(size: 72, borderRadius: 20),
           const SizedBox(height: 16),
           const Text(
             'Henüz Fatura veya Abonelik Eklemediniz',

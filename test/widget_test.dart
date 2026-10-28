@@ -15,6 +15,7 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
+          enableAutoLiveRatesFetchProvider.overrideWithValue(false),
         ],
         child: const CyclaApp(),
       ),

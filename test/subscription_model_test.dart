@@ -1,9 +1,10 @@
+import 'package:cycla/core/services/exchange_rate_service.dart';
 import 'package:cycla/core/utils/currency_formatter.dart';
 import 'package:cycla/models/subscription.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('Subscription Model & Hesaplama Testleri', () {
+  group('Subscription Model & Canlı Kur Ayrıştırıcı Testleri', () {
     test('Ortak abonelik kişi başı pay ve yıllık/aylık TL çevrimi doğru çalışır', () {
       final sub = Subscription(
         id: 'test-1',
@@ -15,14 +16,12 @@ void main() {
         sharedWithCount: 2,
       );
 
-      // 120 USD / 2 kişi = 60 USD yıllık -> 5 USD aylık
       expect(sub.userShareAmount, 60.0);
 
       final monthlyTry = sub.monthlyNormalizedTry(
         usdRate: 35.0,
         eurRate: 38.0,
       );
-      // 5 USD * 35 TL = 175 TL / ay
       expect(monthlyTry, closeTo(175.0, 0.001));
     });
 
@@ -54,6 +53,24 @@ void main() {
       expect(sub.occursOnDay(DateTime(2026, 11, 10)), isTrue);
       expect(sub.occursOnDay(DateTime(2026, 12, 10)), isTrue);
       expect(sub.occursOnDay(DateTime(2027, 1, 10)), isTrue);
+    });
+
+    test('Anlık spot piyasa kur JSON yanıtı USD/TRY ve EUR/TRY olarak doğru hesaplanır', () {
+      const spotJson =
+          '{"data":{"currency":"USD","rates":{"TRY":"40.00","EUR":"0.80"}}}';
+      final parsed = parseCoinbaseSpotResponse(spotJson);
+
+      expect(parsed.usdTry, closeTo(40.0, 0.0001));
+      expect(parsed.eurTry, closeTo(50.0, 0.0001));
+    });
+
+    test('ECB / Frankfurter yedek kur JSON yanıtı doğru hesaplanır', () {
+      const sampleJson =
+          '{"amount":1.0,"base":"EUR","date":"2026-10-28","rates":{"TRY":44.0,"USD":1.1}}';
+      final parsed = parseFrankfurterResponse(sampleJson);
+
+      expect(parsed.eurTry, closeTo(44.0, 0.0001));
+      expect(parsed.usdTry, closeTo(40.0, 0.0001));
     });
   });
 }
