@@ -6,6 +6,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../models/subscription.dart';
 import '../../providers/subscription_providers.dart';
+import '../add_edit/add_edit_subscription_screen.dart';
 
 class AnalyticsScreen extends ConsumerStatefulWidget {
   const AnalyticsScreen({super.key});
@@ -53,7 +54,6 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final entries = breakdown.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    // Tasarruf ipucu için en yüksek maliyetli dijital/eğlence aboneliği bul
     final optionalCandidates = activeSubs.where((s) {
       return s.category == SubscriptionCategory.entertainment ||
           s.category == SubscriptionCategory.softwareAndAi ||
@@ -68,10 +68,37 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         ),
       ),
       body: entries.isEmpty
-          ? const Center(
-              child: Text(
-                'Analiz için en az bir aktif abonelik ekleyin.',
-                style: TextStyle(color: AppColors.textSecondary),
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.pie_chart_outline,
+                      size: 52,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Harcama dağılımını görmek için en az bir aktif fatura veya abonelik ekleyin.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 18),
+                    FilledButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const AddEditSubscriptionScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Yeni Kayıt Ekle'),
+                    ),
+                  ],
+                ),
               ),
             )
           : ListView(
@@ -173,7 +200,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Akıllı Tasarruf Önerisi ("Kullanıyor musun?" Dedektifi)
+                // Akıllı Tasarruf Önerisi
                 if (optionalCandidates.isNotEmpty) ...[
                   Builder(
                     builder: (context) {
@@ -214,7 +241,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '"${topSub.displayName(settings)}" aboneliğinizi aktif kullanmıyorsanız duraklatarak yılda yaklaşık ${CurrencyFormatter.format(annualCost, decimalDigits: 0)} tasarruf edebilirsiniz.',
+                                    '"${topSub.name}" aboneliğinizi aktif kullanmıyorsanız duraklatarak yılda yaklaşık ${CurrencyFormatter.format(annualCost, decimalDigits: 0)} tasarruf edebilirsiniz.',
                                     style: const TextStyle(
                                       fontSize: 13,
                                       color: AppColors.textPrimary,
@@ -274,7 +301,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      sub.displayName(settings),
+                                      sub.name,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.w600,
@@ -318,4 +345,3 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     );
   }
 }
-

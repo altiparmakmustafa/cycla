@@ -7,7 +7,6 @@ import '../../../core/constants/symbolic_icons.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../models/app_settings.dart';
 import '../../../models/subscription.dart';
-import '../../../providers/subscription_providers.dart';
 
 class SubscriptionTile extends StatelessWidget {
   final Subscription subscription;
@@ -31,7 +30,7 @@ class SubscriptionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final accentColor = Color(subscription.colorHex);
     final daysLeft = subscription.daysUntilNextPayment();
-    final title = subscription.displayName(settings);
+    final title = subscription.name;
     final sharePrice = CurrencyFormatter.format(
       subscription.userShareAmount,
       currency: subscription.currency,
@@ -242,6 +241,33 @@ class SubscriptionTile extends StatelessWidget {
     return '$daysLeft gün kaldı';
   }
 
+  void _confirmDelete(BuildContext context, String displayTitle) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        title: const Text('Kaydı Sil'),
+        content: Text(
+          '"$displayTitle" kaydını silmek istediğinize emin misiniz?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              onDelete();
+            },
+            child: const Text('Sil'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showActionSheet(BuildContext context, String displayTitle) {
     showModalBottomSheet<void>(
       context: context,
@@ -368,7 +394,7 @@ class SubscriptionTile extends StatelessWidget {
                   ),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    onDelete();
+                    _confirmDelete(context, displayTitle);
                   },
                 ),
               ],
@@ -379,4 +405,3 @@ class SubscriptionTile extends StatelessWidget {
     );
   }
 }
-

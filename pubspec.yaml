@@ -23,11 +23,11 @@ dependencies:
   timezone: ^0.9.4
 
   # Tarih ve Para Birimi Formatlama
-  intl: ^0.19.0
+  intl: ^0.20.2
 
   # Grafikler ve Takvim Görünümü
-  fl_chart: ^0.69.0
-  table_calendar: ^3.1.2
+  fl_chart: ^0.70.2
+  table_calendar: ^3.2.0
 
   # Yardımcı Paketler
   uuid: ^4.5.1

@@ -12,8 +12,13 @@ import '../../providers/subscription_providers.dart';
 
 class AddEditSubscriptionScreen extends ConsumerStatefulWidget {
   final Subscription? existing;
+  final ServiceTemplate? initialTemplate;
 
-  const AddEditSubscriptionScreen({super.key, this.existing});
+  const AddEditSubscriptionScreen({
+    super.key,
+    this.existing,
+    this.initialTemplate,
+  });
 
   @override
   ConsumerState<AddEditSubscriptionScreen> createState() =>
@@ -23,6 +28,7 @@ class AddEditSubscriptionScreen extends ConsumerStatefulWidget {
 class _AddEditSubscriptionScreenState
     extends ConsumerState<AddEditSubscriptionScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _amountFocusNode = FocusNode();
 
   late final TextEditingController _nameController;
   late final TextEditingController _amountController;
@@ -43,27 +49,42 @@ class _AddEditSubscriptionScreenState
   void initState() {
     super.initState();
     final sub = widget.existing;
-    _nameController = TextEditingController(text: sub?.name ?? '');
+    final tpl = widget.initialTemplate;
+
+    _nameController = TextEditingController(
+      text: sub?.name ?? tpl?.name ?? '',
+    );
     _amountController = TextEditingController(
       text: sub != null ? sub.amount.toStringAsFixed(2) : '',
     );
     _monogramController = TextEditingController(text: sub?.monogram ?? '');
     _notesController = TextEditingController(text: sub?.notes ?? '');
 
-    _currency = sub?.currency ?? CurrencyCode.tryCode;
-    _period = sub?.period ?? BillingPeriod.monthly;
-    _category = sub?.category ?? SubscriptionCategory.entertainment;
+    _currency = sub?.currency ?? tpl?.defaultCurrency ?? CurrencyCode.tryCode;
+    _period = sub?.period ?? tpl?.defaultPeriod ?? BillingPeriod.monthly;
+    _category =
+        sub?.category ?? tpl?.category ?? SubscriptionCategory.utilities;
     _nextPaymentDate =
         sub?.nextPaymentDate ?? DateTime.now().add(const Duration(days: 7));
-    _iconKey = sub?.iconKey ?? 'movie';
-    _colorHex = sub?.colorHex ?? AppColors.selectableCardColors.first;
+    _iconKey = sub?.iconKey ?? tpl?.iconKey ?? 'receipt';
+    _colorHex =
+        sub?.colorHex ?? tpl?.colorHex ?? AppColors.selectableCardColors.first;
     _reminderDaysBefore = sub?.reminderDaysBefore ?? 2;
     _isFreeTrial = sub?.isFreeTrial ?? false;
     _sharedWithCount = sub?.sharedWithCount ?? 1;
+
+    if (tpl != null && sub == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _amountFocusNode.requestFocus();
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
+    _amountFocusNode.dispose();
     _nameController.dispose();
     _amountController.dispose();
     _monogramController.dispose();
@@ -71,16 +92,16 @@ class _AddEditSubscriptionScreenState
     super.dispose();
   }
 
-  void _applyTemplate(ServiceTemplate template, bool storeSafe) {
+  void _applyTemplate(ServiceTemplate template) {
     setState(() {
-      _nameController.text =
-          storeSafe ? template.storeSafeName : template.name;
+      _nameController.text = template.name;
       _category = template.category;
       _iconKey = template.iconKey;
       _colorHex = template.colorHex;
       _currency = template.defaultCurrency;
       _period = template.defaultPeriod;
     });
+    _amountFocusNode.requestFocus();
   }
 
   Future<void> _pickDate() async {
@@ -96,6 +117,38 @@ class _AddEditSubscriptionScreenState
       setState(() {
         _nextPaymentDate = picked;
       });
+    }
+  }
+
+  Future<void> _confirmAndDelete() async {
+    final sub = widget.existing;
+    if (sub == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        title: const Text('Kaydı Sil'),
+        content: Text('"${sub.name}" kaydını silmek istediğinize emin misiniz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sil'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref.read(subscriptionsProvider.notifier).deleteSubscription(sub);
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -146,13 +199,20 @@ class _AddEditSubscriptionScreenState
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.existing != null;
-    final settings = ref.watch(settingsProvider);
     final enteredAmount =
         double.tryParse(_amountController.text.replaceAll(',', '.')) ?? 0;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(isEditing ? 'Kaydı Düzenle' : 'Yeni Fatura / Abonelik'),
+        actions: [
+          if (isEditing)
+            IconButton(
+              tooltip: 'Kaydı Sil',
+              onPressed: _confirmAndDelete,
+              icon: const Icon(Icons.delete_outline, color: AppColors.danger),
+            ),
+        ],
       ),
       body: Form(
         key: _formKey,
@@ -162,7 +222,7 @@ class _AddEditSubscriptionScreenState
             // Hızlı Şablon Seçici (Sadece Yeni Eklerken)
             if (!isEditing) ...[
               const Text(
-                'Hızlı Şablonlar (Sembolik İkonlu)',
+                'Hızlı Seçim Şablonları (İsteğe Bağlı)',
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
@@ -179,20 +239,14 @@ class _AddEditSubscriptionScreenState
                   itemBuilder: (context, index) {
                     final tpl = ServiceTemplate.presets[index];
                     final tplColor = Color(tpl.colorHex);
-                    final label = settings.storeSafeScreenshotMode
-                        ? tpl.storeSafeName
-                        : tpl.name;
                     return ActionChip(
                       avatar: Icon(
                         SymbolicIcons.fromKey(tpl.iconKey),
                         size: 17,
                         color: tplColor,
                       ),
-                      label: Text(label),
-                      onPressed: () => _applyTemplate(
-                        tpl,
-                        settings.storeSafeScreenshotMode,
-                      ),
+                      label: Text(tpl.name),
+                      onPressed: () => _applyTemplate(tpl),
                     );
                   },
                 ),
@@ -205,7 +259,7 @@ class _AddEditSubscriptionScreenState
               controller: _nameController,
               decoration: const InputDecoration(
                 labelText: 'Hizmet veya Fatura Adı',
-                hintText: 'Örn: Ev İnterneti, Elektrik, Film Üyeliği',
+                hintText: 'Örn: Elektrik, Ev İnterneti, Netflix, Kira',
                 prefixIcon: Icon(Icons.label_outline),
               ),
               validator: (val) {
@@ -225,12 +279,13 @@ class _AddEditSubscriptionScreenState
                   flex: 3,
                   child: TextFormField(
                     controller: _amountController,
+                    focusNode: _amountFocusNode,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
                       labelText: 'Toplam Tutar (${_currency.symbol})',
-                      hintText: '199.90',
+                      hintText: 'Örn: 350.00',
                       prefixIcon: const Icon(Icons.payments_outlined),
                     ),
                     validator: (val) {
@@ -311,7 +366,7 @@ class _AddEditSubscriptionScreenState
                     ),
                     trailing: TextButton(
                       onPressed: _pickDate,
-                      child: const Text('Değiştir'),
+                      child: const Text('Tarih Seç'),
                     ),
                   ),
                   const Divider(),
@@ -436,7 +491,7 @@ class _AddEditSubscriptionScreenState
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'Senin aylık/dönemlik payın: ${CurrencyFormatter.format(enteredAmount / _sharedWithCount, currency: _currency)}',
+                          'Senin dönemlik payın: ${CurrencyFormatter.format(enteredAmount / _sharedWithCount, currency: _currency)}',
                           style: const TextStyle(
                             color: AppColors.secondary,
                             fontWeight: FontWeight.w700,
@@ -450,7 +505,7 @@ class _AddEditSubscriptionScreenState
             ),
             const SizedBox(height: 20),
 
-            // Sembolik İkon, Harf Rozeti ve Renk Seçimi (Hukuki Güvenli Özelleştirme)
+            // Sembolik İkon, Harf Rozeti ve Renk Seçimi
             const Text(
               'Kart Görünümü (Sembolik İkon veya Harf Rozeti)',
               style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
@@ -529,7 +584,7 @@ class _AddEditSubscriptionScreenState
               maxLength: 3,
               decoration: const InputDecoration(
                 labelText: 'Özel Harf / Emoji Rozeti (İsteğe Bağlı)',
-                hintText: 'Örn: NF, 🎵, ⚡ (Boş bırakılırsa sembolik ikon görünür)',
+                hintText: 'Örn: EL, 🎵, ⚡ (Boş bırakılırsa sembolik ikon görünür)',
                 prefixIcon: Icon(Icons.tag),
               ),
             ),
@@ -541,7 +596,7 @@ class _AddEditSubscriptionScreenState
               maxLines: 2,
               decoration: const InputDecoration(
                 labelText: 'Notlar / Abone No / İptal Bilgisi (İsteğe Bağlı)',
-                hintText: 'Örn: Tesisat No: 1048291 veya hesap ayarlarından iptal',
+                hintText: 'Örn: Abone numarası veya iptal notu',
                 prefixIcon: Icon(Icons.notes_outlined),
               ),
             ),
@@ -559,7 +614,7 @@ class _AddEditSubscriptionScreenState
               ),
               icon: const Icon(Icons.check),
               label: Text(
-                isEditing ? 'Değişiklikleri Kaydet' : 'Aboneliği Kaydet',
+                isEditing ? 'Değişiklikleri Kaydet' : 'Kaydet',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -572,4 +627,3 @@ class _AddEditSubscriptionScreenState
     );
   }
 }
-

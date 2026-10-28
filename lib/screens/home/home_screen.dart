@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/symbolic_icons.dart';
+import '../../models/service_template.dart';
 import '../../models/subscription.dart';
 import '../../providers/subscription_providers.dart';
 import '../add_edit/add_edit_subscription_screen.dart';
@@ -26,22 +28,18 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Column(
+        title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Cycla',
               style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
             ),
             Text(
-              settings.storeSafeScreenshotMode
-                  ? 'Mağaza Görünümü Aktif (Jenerik İsimler)'
-                  : 'Fatura & Abonelik Takipçisi',
+              'Fatura & Abonelik Takipçisi',
               style: TextStyle(
                 fontSize: 11.5,
-                color: settings.storeSafeScreenshotMode
-                    ? AppColors.secondary
-                    : AppColors.textSecondary,
+                color: AppColors.textSecondary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -49,7 +47,7 @@ class HomeScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            tooltip: 'Yeni Ekle',
+            tooltip: 'Yeni Fatura / Abonelik Ekle',
             onPressed: () => _openAddOrEdit(context),
             icon: const Icon(Icons.add_circle_outline, size: 26),
           ),
@@ -103,7 +101,7 @@ class HomeScreen extends ConsumerWidget {
                           expiringTrials
                               .map(
                                 (s) =>
-                                    '${s.displayName(settings)} (${s.daysUntilNextPayment()} gün kaldı)',
+                                    '${s.name} (${s.daysUntilNextPayment()} gün kaldı)',
                               )
                               .join(', '),
                           style: const TextStyle(
@@ -120,132 +118,139 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(height: 16),
           ],
 
-          // Kategori Filtre Çubuğu
-          SizedBox(
-            height: 40,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: const Text('Tümü'),
-                    selected: selectedCategory == null,
-                    onSelected: (_) {
-                      ref.read(selectedCategoryFilterProvider.notifier).state =
-                          null;
-                    },
-                  ),
-                ),
-                for (final category in SubscriptionCategory.values)
+          // Eğer kullanıcının henüz hiç kaydı yoksa karşılama ve hızlı ekleme ekranı
+          if (allSubs.isEmpty)
+            _buildFirstTimeOnboardingCard(context)
+          else ...[
+            // Kategori Filtre Çubuğu
+            SizedBox(
+              height: 40,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
-                      avatar: Icon(category.icon, size: 16),
-                      label: Text(category.label),
-                      selected: selectedCategory == category,
+                      label: const Text('Tümü'),
+                      selected: selectedCategory == null,
                       onSelected: (_) {
                         ref
                             .read(selectedCategoryFilterProvider.notifier)
-                            .state = selectedCategory == category
-                            ? null
-                            : category;
+                            .state = null;
                       },
                     ),
                   ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                selectedCategory == null
-                    ? 'Ödeme Sırasına Göre Kayıtlar'
-                    : selectedCategory.label,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              Text(
-                '${filteredSubs.length} kayıt',
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          if (filteredSubs.isEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 42, horizontal: 20),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                children: [
-                  const Icon(
-                    Icons.receipt_long_outlined,
-                    size: 48,
-                    color: AppColors.textSecondary,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Bu görünümde henüz fatura veya abonelik yok.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: () => _openAddOrEdit(context),
-                    icon: const Icon(Icons.add),
-                    label: const Text('İlk Aboneliği Ekle'),
-                  ),
-                ],
-              ),
-            )
-          else
-            for (final sub in filteredSubs)
-              SubscriptionTile(
-                subscription: sub,
-                settings: settings,
-                onEdit: () => _openAddOrEdit(context, existing: sub),
-                onMarkPaid: () {
-                  ref
-                      .read(subscriptionsProvider.notifier)
-                      .markCyclePaidAndAdvance(sub);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        '${sub.displayName(settings)} sonraki döneme ilerletildi.',
+                  for (final category in SubscriptionCategory.values)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        avatar: Icon(category.icon, size: 16),
+                        label: Text(category.label),
+                        selected: selectedCategory == category,
+                        onSelected: (_) {
+                          ref
+                              .read(selectedCategoryFilterProvider.notifier)
+                              .state = selectedCategory == category
+                              ? null
+                              : category;
+                        },
                       ),
                     ),
-                  );
-                },
-                onToggleActive: () {
-                  ref.read(subscriptionsProvider.notifier).toggleActive(sub);
-                },
-                onDelete: () {
-                  ref
-                      .read(subscriptionsProvider.notifier)
-                      .deleteSubscription(sub);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${sub.displayName(settings)} silindi.'),
-                    ),
-                  );
-                },
+                ],
               ),
+            ),
+            const SizedBox(height: 16),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  selectedCategory == null
+                      ? 'Ödeme Sırasına Göre Kayıtlarım'
+                      : selectedCategory.label,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                Text(
+                  '${filteredSubs.length} kayıt',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            if (filteredSubs.isEmpty)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.filter_list_off,
+                      size: 40,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Seçili kategoride henüz bir kaydınız bulunmuyor.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    OutlinedButton.icon(
+                      onPressed: () => _openAddOrEdit(context),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Bu Kategoriye Ekle'),
+                    ),
+                  ],
+                ),
+              )
+            else
+              for (final sub in filteredSubs)
+                SubscriptionTile(
+                  subscription: sub,
+                  settings: settings,
+                  onEdit: () => _openAddOrEdit(context, existing: sub),
+                  onMarkPaid: () {
+                    ref
+                        .read(subscriptionsProvider.notifier)
+                        .markCyclePaidAndAdvance(sub);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          '${sub.name} sonraki döneme ilerletildi.',
+                        ),
+                      ),
+                    );
+                  },
+                  onToggleActive: () {
+                    ref.read(subscriptionsProvider.notifier).toggleActive(sub);
+                  },
+                  onDelete: () {
+                    ref
+                        .read(subscriptionsProvider.notifier)
+                        .deleteSubscription(sub);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${sub.name} silindi.'),
+                      ),
+                    );
+                  },
+                ),
+          ],
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -254,19 +259,124 @@ class HomeScreen extends ConsumerWidget {
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text(
-          'Yeni Ekle',
+          'Fatura / Abonelik Ekle',
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
     );
   }
 
-  void _openAddOrEdit(BuildContext context, {Subscription? existing}) {
+  Widget _buildFirstTimeOnboardingCard(BuildContext context) {
+    final quickTemplates = ServiceTemplate.presets.take(6).toList();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: AppColors.primary.withOpacityFactor(0.28),
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacityFactor(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.add_card_outlined,
+              size: 32,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Henüz Fatura veya Abonelik Eklemediniz',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Aylık sabit giderlerinizi görmek, takvimde takip etmek ve ödeme yaklaşınca bildirim almak için kendi fatura veya aboneliklerinizi ekleyin.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13.5,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: () => _openAddOrEdit(context),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            icon: const Icon(Icons.add),
+            label: const Text(
+              'Kendi Kaydımı Oluştur',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+            ),
+          ),
+          const SizedBox(height: 22),
+          const Divider(),
+          const SizedBox(height: 10),
+          const Text(
+            'Veya hazır şablonla hızlıca ekleyin:',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              for (final tpl in quickTemplates)
+                ActionChip(
+                  avatar: Icon(
+                    SymbolicIcons.fromKey(tpl.iconKey),
+                    size: 16,
+                    color: Color(tpl.colorHex),
+                  ),
+                  label: Text('+ ${tpl.name}'),
+                  onPressed: () =>
+                      _openAddOrEdit(context, initialTemplate: tpl),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openAddOrEdit(
+    BuildContext context, {
+    Subscription? existing,
+    ServiceTemplate? initialTemplate,
+  }) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => AddEditSubscriptionScreen(existing: existing),
+        builder: (_) => AddEditSubscriptionScreen(
+          existing: existing,
+          initialTemplate: initialTemplate,
+        ),
       ),
     );
   }
 }
-

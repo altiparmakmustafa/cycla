@@ -133,10 +133,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
           Expanded(
             child: selectedEvents.isEmpty
-                ? const Center(
-                    child: Text(
-                      'Seçili günde planlanmış ödeme bulunmuyor.',
-                      style: TextStyle(color: AppColors.textSecondary),
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        subs.isEmpty
+                            ? 'Henüz eklenmiş bir ödeme planı yok. Eklediğiniz fatura ve abonelikler takvimde otomatik işaretlenir.'
+                            : 'Seçili günde planlanmış ödeme bulunmuyor.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.textSecondary),
+                      ),
                     ),
                   )
                 : ListView.builder(
@@ -173,7 +179,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    item.displayName(settings),
+                                    item.name,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w700,
                                       fontSize: 15,
@@ -210,4 +216,3 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     );
   }
 }
-

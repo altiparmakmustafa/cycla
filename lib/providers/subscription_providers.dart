@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../core/constants/legal_texts.dart';
 import '../core/services/notification_service.dart';
 import '../models/app_settings.dart';
 import '../models/subscription.dart';
@@ -83,16 +82,6 @@ class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
   Future<void> toggleActive(Subscription sub) async {
     final toggled = sub.copyWith(isActive: !sub.isActive);
     await updateSubscription(toggled);
-  }
-
-  Future<void> resetToDemoData() async {
-    final demo = SubscriptionRepository.buildStarterSampleData();
-    state = demo;
-    await _repository.saveSubscriptions(demo);
-    await NotificationService.instance.syncAllReminders(
-      demo,
-      _ref.read(settingsProvider),
-    );
   }
 
   Future<void> clearAll() async {
@@ -193,12 +182,3 @@ final categoryBreakdownProvider =
   }
   return map;
 });
-
-/// Mağaza Ekran Görüntüsü Modu açıksa ismi güvenli jenerik isme çevirir.
-extension SubscriptionDisplayX on Subscription {
-  String displayName(AppSettings settings) {
-    if (!settings.storeSafeScreenshotMode) return name;
-    return LegalTexts.toStoreSafeName(name, category.label);
-  }
-}
-

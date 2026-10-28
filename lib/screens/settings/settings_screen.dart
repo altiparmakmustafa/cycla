@@ -56,6 +56,47 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  Future<void> _confirmClearAll() async {
+    final count = ref.read(subscriptionsProvider).length;
+    if (count == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Silinecek kayıt bulunmuyor.')),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        title: const Text('Tüm Kayıtları Sil'),
+        content: Text(
+          'Kayıtlı $count adet fatura/abonelik kalıcı olarak silinecek. Emin misiniz?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Tümünü Sil'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref.read(subscriptionsProvider.notifier).clearAll();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tüm kayıtlarınız temizlendi.')),
+        );
+      }
+    }
+  }
+
   void _showLegalDisclaimerDialog() {
     showDialog<void>(
       context: context,
@@ -100,7 +141,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Ayarlar & Yasal Bilgiler',
+          'Ayarlar',
           style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
         ),
       ),
@@ -174,12 +215,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Döviz Kuru Hesaplama (Çevrimdışı)',
+                  'Döviz Kuru Hesaplama',
                   style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5),
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'USD ve EUR bazlı aboneliklerin TL karşılığını hesaplamak için kullanılır.',
+                  'USD ve EUR cinsinden eklediğiniz aboneliklerin aylık TL karşılığını hesaplamak için kullanılır.',
                   style: TextStyle(
                     fontSize: 12.5,
                     color: AppColors.textSecondary,
@@ -227,52 +268,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Hukuki ve Mağaza Güvenliği Modu (App Store / Google Play İnceleme Koruması)
+          // Veri Yönetimi ve Hakkında
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: AppColors.secondary.withOpacityFactor(0.35),
-              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
-                  children: [
-                    Icon(
-                      Icons.shield_outlined,
-                      color: AppColors.secondary,
-                      size: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Mağaza & Marka Hukuku Koruması',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15.5,
-                      ),
-                    ),
-                  ],
+                const Text(
+                  'Veri ve Yasal Bilgiler',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5),
                 ),
-                const SizedBox(height: 6),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Mağaza Ekran Görüntüsü Modu'),
-                  subtitle: const Text(
-                    LegalTexts.storeSafeModeExplanation,
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  value: settings.storeSafeScreenshotMode,
-                  onChanged: (val) {
-                    ref.read(settingsProvider.notifier).updateSettings(
-                          settings.copyWith(storeSafeScreenshotMode: val),
-                        );
-                  },
-                ),
-                const Divider(),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(
@@ -287,45 +296,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: _showLegalDisclaimerDialog,
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Veri Yönetimi
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Veri Yönetimi',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(
-                    Icons.restore_outlined,
-                    color: AppColors.secondary,
-                  ),
-                  title: const Text('Örnek Verileri Yeniden Yükle'),
-                  onTap: () async {
-                    await ref
-                        .read(subscriptionsProvider.notifier)
-                        .resetToDemoData();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Örnek abonelik listesi yüklendi.'),
-                        ),
-                      );
-                    }
-                  },
-                ),
+                const Divider(),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(
@@ -333,31 +304,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     color: AppColors.danger,
                   ),
                   title: const Text(
-                    'Tüm Kayıtları Temizle',
+                    'Tüm Kayıtlarımı Sil',
                     style: TextStyle(color: AppColors.danger),
                   ),
-                  onTap: () async {
-                    await ref.read(subscriptionsProvider.notifier).clearAll();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Tüm kayıtlar temizlendi.'),
-                        ),
-                      );
-                    }
-                  },
+                  subtitle: const Text(
+                    'Eklediğiniz tüm fatura ve abonelikleri cihazdan kaldırır',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  onTap: _confirmClearAll,
                 ),
               ],
             ),
           ),
           const SizedBox(height: 20),
 
-          // Alt Bilgi Yasal Feragatname Özeti
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 8),
             child: Text(
-              'Bu uygulamada hiçbir şirketin tescilli logosu yer almaz. '
-              'Hizmet adları yalnızca kişisel bütçe takibi amacıyla tanımlayıcı olarak gösterilir.',
+              'Cycla v1.0.0 • Tüm verileriniz yalnızca kendi cihazınızda saklanır.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.textSecondary,
@@ -370,4 +334,3 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 }
-

@@ -1,4 +1,3 @@
-import 'package:cycla/core/constants/legal_texts.dart';
 import 'package:cycla/core/utils/currency_formatter.dart';
 import 'package:cycla/models/subscription.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -56,21 +55,5 @@ void main() {
       expect(sub.occursOnDay(DateTime(2026, 12, 10)), isTrue);
       expect(sub.occursOnDay(DateTime(2027, 1, 10)), isTrue);
     });
-
-    test('Mağaza Ekran Görüntüsü Modu marka adlarını jenerik isme dönüştürür', () {
-      expect(
-        LegalTexts.toStoreSafeName('Netflix Aile', 'Eğlence & Yayın'),
-        'Film & Dizi Platformu',
-      );
-      expect(
-        LegalTexts.toStoreSafeName('Spotify Premium', 'Eğlence & Yayın'),
-        'Müzik Akış Servisi',
-      );
-      expect(
-        LegalTexts.toStoreSafeName('Elektrik Faturası', 'Ev Faturaları'),
-        'Elektrik Faturası',
-      );
-    });
   });
 }
-
