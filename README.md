@@ -64,7 +64,7 @@ flutter test
 flutter run -d chrome
 
 # iOS Simülatör (Mac + Xcode) üzerinde çalıştırma
-open -a Simulator
+flutter emulators --launch apple_ios_simulator
 flutter run
 
 # macOS masaüstü uygulaması olarak çalıştırma
