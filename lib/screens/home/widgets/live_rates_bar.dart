@@ -16,7 +16,7 @@ class LiveRatesBar extends ConsumerWidget {
     final hasLiveTimestamp = settings.ratesUpdatedAt != null;
 
     final statusColor =
-        hasLiveTimestamp ? AppColors.secondary : AppColors.warning;
+        hasLiveTimestamp ? AppColors.primary : AppColors.secondary;
     final timeText = hasLiveTimestamp
         ? DateFormat('HH:mm:ss', 'tr_TR').format(settings.ratesUpdatedAt!)
         : 'Bağlanıyor...';

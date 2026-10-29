@@ -26,16 +26,15 @@ class SummaryHeroCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         gradient: const LinearGradient(
           colors: [
-            Color(0xFF4F46E5),
-            Color(0xFF7C3AED),
-            Color(0xFF0EA5E9),
+            AppColors.heroGradientStart,
+            AppColors.heroGradientEnd,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacityFactor(0.35),
+            color: AppColors.heroGradientStart.withOpacityFactor(0.32),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),

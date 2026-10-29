@@ -15,7 +15,12 @@ class CyclaApp extends StatelessWidget {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: AppColors.primary,
       brightness: Brightness.dark,
+      primary: AppColors.primary,
+      onPrimary: AppColors.onPrimary,
+      secondary: AppColors.secondary,
+      onSecondary: AppColors.onPrimary,
       surface: AppColors.surface,
+      onSurface: AppColors.textPrimary,
     );
 
     return MaterialApp(

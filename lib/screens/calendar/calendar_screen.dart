@@ -90,12 +90,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               calendarStyle: CalendarStyle(
                 outsideDaysVisible: false,
                 todayDecoration: BoxDecoration(
-                  color: AppColors.primary.withOpacityFactor(0.35),
+                  color: AppColors.primary.withOpacityFactor(0.28),
                   shape: BoxShape.circle,
                 ),
                 selectedDecoration: const BoxDecoration(
                   color: AppColors.primary,
                   shape: BoxShape.circle,
+                ),
+                selectedTextStyle: const TextStyle(
+                  color: AppColors.onPrimary,
+                  fontWeight: FontWeight.w800,
                 ),
                 markerDecoration: const BoxDecoration(
                   color: AppColors.secondary,

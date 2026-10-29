@@ -230,7 +230,7 @@ class SubscriptionTile extends StatelessWidget {
     if (!isActive) return AppColors.textSecondary;
     if (daysLeft < 0) return AppColors.danger;
     if (daysLeft <= 3) return AppColors.warning;
-    return AppColors.secondary;
+    return AppColors.primary;
   }
 
   String _resolveCountdownText(int daysLeft, bool isActive) {

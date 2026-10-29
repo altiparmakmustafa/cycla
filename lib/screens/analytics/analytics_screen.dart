@@ -19,13 +19,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   int _touchedIndex = -1;
 
   static const List<Color> _chartPalette = [
-    Color(0xFF6C63FF),
-    Color(0xFF00D2B8),
-    Color(0xFFFFB74D),
-    Color(0xFFE53935),
-    Color(0xFF29B6F6),
-    Color(0xFFAB47BC),
-    Color(0xFF78909C),
+    Color(0xFF38B2AC),
+    Color(0xFFDD6B20),
+    Color(0xFF3182CE),
+    Color(0xFF38A169),
+    Color(0xFFE53E3E),
+    Color(0xFF805AD5),
+    Color(0xFF718096),
   ];
 
   @override

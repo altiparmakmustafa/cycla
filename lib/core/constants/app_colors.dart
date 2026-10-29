@@ -1,38 +1,44 @@
 import 'package:flutter/material.dart';
 
-/// Uygulama genelinde kullanılan modern Neo-Fintech renk paleti
+/// Uygulama genelinde kullanılan göz yormayan "Kadife Okaliptüs" renk paleti
 /// ve sembolik abonelik kartları için seçilebilir renk havuzu.
 class AppColors {
   AppColors._();
 
-  // Ana Tema Renkleri (Koyu Mod Odaklı)
-  static const Color background = Color(0xFF0F111A);
-  static const Color surface = Color(0xFF1A1D2B);
-  static const Color surfaceElevated = Color(0xFF24283B);
-  static const Color primary = Color(0xFF6C63FF);
-  static const Color secondary = Color(0xFF00D2B8);
-  static const Color warning = Color(0xFFFFB74D);
-  static const Color danger = Color(0xFFFF5252);
-  static const Color success = Color(0xFF4CAF50);
+  // Kadife Okaliptüs Ana Tema Renkleri (Yumuşak Kontrast & Göz Dinlendirici)
+  static const Color background = Color(0xFF1B252C);
+  static const Color surface = Color(0xFF24313A);
+  static const Color surfaceElevated = Color(0xFF2E3E49);
 
-  static const Color textPrimary = Color(0xFFF5F7FA);
-  static const Color textSecondary = Color(0xFF9EA4B8);
+  static const Color primary = Color(0xFF4FD1C5); // Pastel Nane / Okaliptüs
+  static const Color onPrimary = Color(0xFF132A2E); // Buton içi yüksek kontrast koyu çam
+  static const Color secondary = Color(0xFFF6AD55); // Sıcak Kayısı Vurgu
+
+  static const Color heroGradientStart = Color(0xFF2C7A7B);
+  static const Color heroGradientEnd = Color(0xFF3182CE);
+
+  static const Color warning = Color(0xFFF6AD55);
+  static const Color danger = Color(0xFFEF6461);
+  static const Color success = Color(0xFF68D391);
+
+  static const Color textPrimary = Color(0xFFEDF2F7);
+  static const Color textSecondary = Color(0xFFA0B1BF);
 
   /// Marka logoları yerine sembolik ikonlarla eşleştirilebilecek
-  /// kullanıcı tarafından seçilebilir kart renkleri (ARGB Hex).
+  /// kullanıcı tarafından seçilebilir yumuşak kart renkleri (ARGB Hex).
   static const List<int> selectableCardColors = [
-    0xFFE53935, // Kırmızı (Sinema / Video)
-    0xFF1DB954, // Yeşil (Müzik / Ses)
-    0xFF6C63FF, // İndigo (Bulut / Yazılım)
-    0xFF00ACC1, // Camgöbeği (İnternet / İletişim)
-    0xFFFFB300, // Kehribar (Elektrik / Enerji)
-    0xFF1E88E5, // Mavi (Su / Hizmetler)
-    0xFFFF7043, // Turuncu (Doğalgaz / Isınma)
-    0xFF8E24AA, // Mor (Oyun / Eğlence)
-    0xFFEC407A, // Pembe (Spor / Sağlık)
-    0xFF26A69A, // Turkuaz (Yapay Zeka / Üretkenlik)
-    0xFF5C6BC0, // Lacivert (Eğitim / Kitap)
-    0xFF78909C, // Gri-Mavi (Genel Fatura / Aidat)
+    0xFF4FD1C5, // Pastel Nane (Bulut / Yazılım)
+    0xFF63B3ED, // Gökyüzü Mavisi (İnternet / Su)
+    0xFFF6AD55, // Sıcak Kayısı (Elektrik / Enerji)
+    0xFF68D391, // Adaçayı Yeşili (Müzik / Ses)
+    0xFFFC8181, // Yumuşak Mercan (Sinema / Video)
+    0xFFB794F4, // Yumuşak Lavanta (Oyun / Eğlence)
+    0xFFF687B3, // Gül Kurusu (Spor / Sağlık)
+    0xFF4DB6AC, // Deniz Yeşili (Yapay Zeka / Üretkenlik)
+    0xFFFF8A65, // Şeftali Turuncu (Doğalgaz / Isınma)
+    0xFF7F9CF5, // İris Mavisi (Eğitim / Kitap)
+    0xFFECC94B, // Bal Sarısı (Alışveriş / Üyelik)
+    0xFF90A4AE, // Sis Grisi (Genel Fatura / Aidat)
   ];
 }
 
@@ -44,4 +50,3 @@ extension ColorAlphaX on Color {
     return withAlpha((clamped * 255).round());
   }
 }
-
