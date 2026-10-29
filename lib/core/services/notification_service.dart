@@ -42,6 +42,13 @@ class NotificationService {
     );
 
     await _plugin.initialize(initSettings);
+
+    // Android 13+ (API 33+) cihazlarda çalışma zamanı bildirim izni isteği
+    final androidPlugin = _plugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.requestNotificationsPermission();
+
     _initialized = true;
   }
 
@@ -107,8 +114,20 @@ class NotificationService {
             importance: Importance.high,
             priority: Priority.high,
           ),
-          iOS: DarwinNotificationDetails(),
-          macOS: DarwinNotificationDetails(),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBanner: true,
+            presentList: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+          macOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBanner: true,
+            presentList: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
         ),
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
@@ -143,8 +162,20 @@ class NotificationService {
               importance: Importance.max,
               priority: Priority.high,
             ),
-            iOS: DarwinNotificationDetails(),
-            macOS: DarwinNotificationDetails(),
+            iOS: DarwinNotificationDetails(
+              presentAlert: true,
+              presentBanner: true,
+              presentList: true,
+              presentBadge: true,
+              presentSound: true,
+            ),
+            macOS: DarwinNotificationDetails(
+              presentAlert: true,
+              presentBanner: true,
+              presentList: true,
+              presentBadge: true,
+              presentSound: true,
+            ),
           ),
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
